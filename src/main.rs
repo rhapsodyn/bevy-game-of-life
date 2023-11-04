@@ -3,11 +3,11 @@ use rand::random;
 
 use std::collections::HashSet;
 
-const SIZE: f32 = 20.0;
+const SIZE: f32 = 10.0;
 const GAP: f32 = 4.0;
-const HALF_LEN: i32 = 10;
-const INIT_ALIVE_COUNT: usize = 64;
-const TICK: f32 = 1.0;
+const HALF_LEN: i32 = 40;
+const INIT_ALIVE_COUNT: usize = (HALF_LEN * HALF_LEN) as usize;
+const TICK: f32 = 0.1;
 
 type Coord = (i32, i32);
 
@@ -94,7 +94,7 @@ fn setup(mut commands: Commands) {
             ],
             ..Default::default()
         },
-        transform: Transform::from_xyz(0.0, (HALF_LEN as f32 + 1.0) * (SIZE + GAP), 0.0),
+        transform: Transform::from_xyz((HALF_LEN as f32 + 10.0) * (SIZE + GAP), 0.0, 0.0),
         ..Default::default()
     });
     commands.spawn(Camera2dBundle::default());
@@ -178,7 +178,7 @@ fn update_cell_color(mut query: Query<(&mut Sprite, &Cell)>) {
 
 fn update_dashboard(db: Res<Dashboard>, mut query: Query<&mut Text>) {
     for mut t in query.iter_mut() {
-        t.sections[0].value = format!("Round: {} ", db.round);
+        t.sections[0].value = format!("Round: {} \n", db.round);
         t.sections[1].value = format!("Survival: {} ", db.survival);
     }
 }
