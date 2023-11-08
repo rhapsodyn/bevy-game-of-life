@@ -2,12 +2,13 @@ use bevy::prelude::*;
 use rand::random;
 
 use std::collections::HashSet;
+use std::time::Duration;
 
 const SIZE: f32 = 10.0;
 const GAP: f32 = 4.0;
 const HALF_LEN: i32 = 40;
 const INIT_ALIVE_COUNT: usize = (HALF_LEN * HALF_LEN) as usize;
-const TICK: f32 = 0.1;
+const TICK: Duration = Duration::from_millis(100);
 
 type Coord = (i32, i32);
 
@@ -185,7 +186,7 @@ fn update_dashboard(db: Res<Dashboard>, mut query: Query<&mut Text>) {
 
 fn main() {
     App::new()
-        .insert_resource(FixedTime::new_from_secs(TICK))
+        .insert_resource(Time::<Fixed>::from_duration(TICK))
         .insert_resource(Dashboard::default())
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
