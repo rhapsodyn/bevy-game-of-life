@@ -9,7 +9,7 @@ edition = "2021"
 # bevy = { version = "0.11.3" }
 bevy = { version = "^0.12", features = ["dynamic_linking"] }
 rand = "0.8.5"
-
+itertools = "0.11.0"
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]

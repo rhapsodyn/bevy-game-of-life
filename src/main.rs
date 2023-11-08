@@ -3,12 +3,13 @@ use rand::random;
 
 use std::collections::HashSet;
 use std::time::Duration;
+use itertools::iproduct;
 
 const SIZE: f32 = 10.0;
 const GAP: f32 = 4.0;
 const HALF_LEN: i32 = 40;
 const INIT_ALIVE_COUNT: usize = (HALF_LEN * HALF_LEN) as usize;
-const TICK: Duration = Duration::from_millis(100);
+const TICK: Duration = Duration::from_millis(10);
 
 type Coord = (i32, i32);
 
@@ -33,23 +34,23 @@ struct Dashboard {
 fn seed() -> HashSet<Coord> {
     let mut result = HashSet::new();
 
-    while result.len() < INIT_ALIVE_COUNT {
+    loop {
         // not on edge
         let x = random::<i32>() % HALF_LEN;
         let y = random::<i32>() % HALF_LEN;
         result.insert((x, y));
+        if result.len() == INIT_ALIVE_COUNT {
+            return result;
+        }
     }
-
-    result
 }
 
 fn setup(mut commands: Commands) {
     // cells
-    let mut cells_with_mm = vec![];
     let rand_alives = seed();
 
-    for x in -HALF_LEN..HALF_LEN {
-        for y in -HALF_LEN..HALF_LEN {
+    let cells = iproduct!(-HALF_LEN..HALF_LEN, -HALF_LEN..HALF_LEN)
+        .map(|(x, y)| {
             let cell = Cell {
                 state: if rand_alives.contains(&(x, y)) {
                     State::Alive
@@ -58,11 +59,9 @@ fn setup(mut commands: Commands) {
                 },
                 index_xy: (x, y),
             };
-
             let pos = Vec3::new(x as f32 * (SIZE + GAP), y as f32 * (SIZE + GAP), 0.0);
-            // dbg!(&pos);
-            cells_with_mm.push((
-                cell,
+            (
+                cell, 
                 SpriteBundle {
                     sprite: Sprite {
                         custom_size: Some(Vec2 { x: SIZE, y: SIZE }),
@@ -70,12 +69,13 @@ fn setup(mut commands: Commands) {
                     },
                     transform: Transform::from_translation(pos),
                     ..Default::default()
-                },
-            ));
-        }
-    }
-    // dbg!(&cells_with_mm.iter().map(|cm| &cm.0).collect::<Vec<_>>());
-    commands.spawn_batch(cells_with_mm);
+                }
+            )
+        })
+        .collect::<Vec<_>>();
+
+
+    commands.spawn_batch(cells);
     // dashboard
     let ts = TextStyle {
         font_size: 30.0,
@@ -116,8 +116,7 @@ fn dead_or_alive(mut db: ResMut<Dashboard>, mut query: Query<&mut Cell>) {
         return;
     }
 
-    db.survival = 0;
-    for mut cell in query.iter_mut() {
+    query.par_iter_mut().for_each(|mut cell| {
         let live_count = alive_neighbor_count(&cell.index_xy, &alive_coords);
         match cell.state {
             State::Alive => {
@@ -127,16 +126,12 @@ fn dead_or_alive(mut db: ResMut<Dashboard>, mut query: Query<&mut Cell>) {
             }
             State::Dead => {
                 if live_count == 3 {
-                    // println!("come to live");
                     cell.state = State::Alive
                 }
             }
         }
-        // dbg!(&cell);
-        if cell.state == State::Alive {
-            db.survival += 1;
-        }
-    }
+    });
+    db.survival = query.iter().filter(|c| c.state == State::Alive).count();
     db.round += 1;
 }
 
@@ -169,19 +164,19 @@ fn test_alive_neighbor() {
 }
 
 fn update_cell_color(mut query: Query<(&mut Sprite, &Cell)>) {
-    for (mut sprite, cell) in query.iter_mut() {
+    query.par_iter_mut().for_each(|(mut sprite, cell)| {
         match cell.state {
             State::Dead => sprite.color = Color::GRAY,
             State::Alive => sprite.color = Color::WHITE,
         }
-    }
+    });
 }
 
 fn update_dashboard(db: Res<Dashboard>, mut query: Query<&mut Text>) {
-    for mut t in query.iter_mut() {
+    query.iter_mut().for_each(|mut t| {
         t.sections[0].value = format!("Round: {} \n", db.round);
         t.sections[1].value = format!("Survival: {} ", db.survival);
-    }
+    });
 }
 
 fn main() {
